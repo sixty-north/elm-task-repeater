@@ -1,4 +1,4 @@
-module Poll exposing (..)
+module TaskRepeater exposing (Model, Msg, start, update)
 
 import Cmd.Extra exposing (message)
 import Platform.Cmd
