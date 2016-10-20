@@ -1,13 +1,9 @@
-# Elm project
+# TaskRepeater
 
-## Getting started
+This package helps you repeatedly perform a Task on a time schedule until you
+want it to stop.
 
-You need to have [Elm](http://elm-lang.org/) 0.17 installed on your machine.
+This is useful, for example, for polling a URL. You can either poll
+indefinitely, or you can stop the polling once some desired result is received.
 
-Compile this project with:
-
-    elm make src/Main.elm
-
-Then view it:
-
-    elm reactor
+More documentation coming soon.
