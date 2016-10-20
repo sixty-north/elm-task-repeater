@@ -1,5 +1,6 @@
 module Poll exposing (..)
 
+import Cmd.Extra exposing (message)
 import Http
 import Json.Decode
 import Platform.Cmd
@@ -28,11 +29,6 @@ type alias Model extmsg result =
     }
 
 
-send : msg -> Platform.Cmd.Cmd msg
-send =
-    Task.succeed >> (Task.perform identity identity)
-
-
 update : Msg extmsg result -> Model extmsg result -> ( Model extmsg result, Platform.Cmd.Cmd extmsg )
 update msg model =
     case msg of
@@ -46,9 +42,9 @@ update msg model =
 
                 msgs result =
                     if (model.continue result) then
-                        [model.on_response result, model.msg_wrapper Poll]
+                        [ model.on_response result, model.msg_wrapper Poll ]
                     else
-                        [model.on_response result]
+                        [ model.on_response result ]
 
                 cmd =
                     Task.perform
@@ -59,9 +55,9 @@ update msg model =
                 ( model, cmd )
 
         Multi msgs ->
-            model ! List.map send msgs
+            model ! List.map message msgs
 
 
 start : Model extmsg result -> Platform.Cmd.Cmd extmsg
 start model =
-    send (model.msg_wrapper Poll)
+    message (model.msg_wrapper Poll)
