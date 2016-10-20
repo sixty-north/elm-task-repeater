@@ -7,7 +7,7 @@ import Task.Extra exposing (delay)
 import Time
 
 
-type Msg extmsg result
+type Msg extmsg
     = Poll
     | Multi (List extmsg)
 
@@ -17,12 +17,12 @@ type alias Model extmsg error result =
     , period : Time.Time
     , on_success : result -> extmsg
     , on_error : error -> extmsg
-    , msg_wrapper : Msg extmsg result -> extmsg
+    , msg_wrapper : Msg extmsg -> extmsg
     , continue : result -> Bool
     }
 
 
-update : Msg extmsg result -> Model extmsg error result -> ( Model extmsg error result, Platform.Cmd.Cmd extmsg )
+update : Msg extmsg -> Model extmsg error result -> ( Model extmsg error result, Platform.Cmd.Cmd extmsg )
 update msg model =
     case msg of
         Poll ->
