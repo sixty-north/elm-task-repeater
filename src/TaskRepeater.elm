@@ -1,4 +1,4 @@
-module TaskRepeater exposing (Model, Msg, start, update)
+module TaskRepeater exposing (Model, Msg, Scheduler, start, update)
 
 import Cmd.Extra exposing (message)
 import Platform.Cmd
@@ -12,9 +12,14 @@ type Msg extmsg
     | Multi (List extmsg)
 
 
-type alias Model extmsg error result =
+type alias Scheduler m =
+    { model : m
+    , next : m -> ( m, Time.Time )
+    }
+
+type alias Model extmsg error result s =
     { task : Task.Task error result
-    , period : Time.Time
+    , scheduler : Scheduler s
     , on_success : result -> extmsg
     , on_error : error -> extmsg
     , msg_wrapper : Msg extmsg -> extmsg
@@ -22,13 +27,22 @@ type alias Model extmsg error result =
     }
 
 
-update : Msg extmsg -> Model extmsg error result -> ( Model extmsg error result, Platform.Cmd.Cmd extmsg )
+update : Msg extmsg -> Model extmsg error result scheduler -> ( Model extmsg error result scheduler, Platform.Cmd.Cmd extmsg )
 update msg model =
     case msg of
         Poll ->
             let
+                ( scheduler_model, period ) =
+                    model.scheduler.next model.scheduler.model
+
+                s =
+                    model.scheduler
+
+                scheduler =
+                    { s | model = scheduler_model }
+
                 task =
-                    delay model.period model.task
+                    delay period model.task
 
                 msgs result =
                     if (model.continue result) then
@@ -42,12 +56,12 @@ update msg model =
                         (msgs >> Multi >> model.msg_wrapper)
                         task
             in
-                ( model, cmd )
+                { model | scheduler = scheduler } ! [ cmd ]
 
         Multi msgs ->
             model ! List.map message msgs
 
 
-start : Model extmsg error result -> Platform.Cmd.Cmd extmsg
+start : Model extmsg error result scheduler -> Platform.Cmd.Cmd extmsg
 start model =
     message (model.msg_wrapper Poll)
