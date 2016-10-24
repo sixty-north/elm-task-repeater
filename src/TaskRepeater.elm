@@ -1,4 +1,4 @@
-module TaskRepeater exposing (model, Model, Msg, scheduler, Scheduler, start,update)
+module TaskRepeater exposing (model, Model, Msg, scheduler, Scheduler, start, update)
 
 {-| Provides a repeatedly running a Task and communicating the results (success
 or error) to other parts of a program.
@@ -19,6 +19,9 @@ results via the messages you configure it with.
 
 # Execution
 @docs start, update
+
+# Plumbing
+@docs Model, Msg
 
 TODO: Example
 -}
@@ -42,10 +45,12 @@ type alias SchedulerRecord m =
     , next : m -> ( m, Time.Time )
     }
 
+
 {-| Defines a particular schedule for executing tasks.
- -}
-type Scheduler m =
-    Scheduler (SchedulerRecord m)
+-}
+type Scheduler m
+    = Scheduler (SchedulerRecord m)
+
 
 {-| Create a schedule for task execution.
 
@@ -53,10 +58,14 @@ type Scheduler m =
 
 `next` determines how long to wait before the next task execution. Given the
 current model, it produces the next model and the delay time.
+
+For example, to create a scheduler that runs a task every 10 seconds:
+
+    scheduler (Time.seconds 10) (\m -> (m, m))
 -}
 scheduler : m -> (m -> ( m, Time.Time )) -> Scheduler m
 scheduler model next =
-    Scheduler (SchedulerRecord  model next)
+    Scheduler (SchedulerRecord model next)
 
 
 type alias ModelRecord error result s extmsg =
@@ -68,7 +77,9 @@ type alias ModelRecord error result s extmsg =
     , continue : result -> Bool
     }
 
-
+{-| A model for TaskRepeaters. You'll need one (or more) of these in your
+higher-level model to use TaskRepeater.
+-}
 type Model error result s extmsg
     = Model (ModelRecord error result s extmsg)
 
@@ -81,6 +92,18 @@ type Model error result s extmsg
 `onError` creates the message that will be issued when the task fails.
 `msgWrapper` creates a message that wraps a Msg so that users can route messages to `update`.
 `continue` determines if execution should continue when a result is received.
+
+    type Msg
+        = Success Result
+        | Error Http.Error
+        | Wrapper (TaskRepeater.Msg Msg)
+
+    poller =
+        let
+            task = Http.get resultDecoder "http://example.com"
+            scheduler = uniform (Time.second 5)
+        in
+            model task scheduler Success Error Wrapper (\_ -> True)
 -}
 model : Task.Task e r -> Scheduler s -> (r -> m) -> (e -> m) -> (Msg m -> m) -> (r -> Bool) -> Model e r s m
 model task scheduler onResult onError msgWrapper continue =
@@ -130,6 +153,11 @@ update msg model =
 {-| Start executing a task on a schedule.
 
 This will return a Cmd that should be routed normally by the caller.
+
+    update msg model =
+        case msg of
+            StartPolling ->
+                model ! [start model.poller]
 -}
 start : Model e r s m -> Platform.Cmd.Cmd m
 start model =
