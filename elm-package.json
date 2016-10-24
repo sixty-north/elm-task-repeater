@@ -1,8 +1,8 @@
 {
-    "version": "1.0.0",
+    "version": "0.0.1",
     "summary": "A package for repeating a task",
     "repository": "https://github.com/abingham/elm-task-repeater.git",
-    "license": "BSD3",
+    "license": "MIT",
     "source-directories": [
         "src"
     ],
