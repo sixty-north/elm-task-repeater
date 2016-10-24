@@ -1,4 +1,4 @@
-module TaskRepeater exposing (model, Model, Msg, scheduler, start, update)
+module TaskRepeater exposing (model, Model, Msg, scheduler, Scheduler, start,update)
 
 {-| Provides a repeatedly running a Task and communicating the results (success
 or error) to other parts of a program.
@@ -15,7 +15,7 @@ Based on these TaskRepeater will repeated execute the task, sending back the
 results via the messages you configure it with.
 
 # Factories
-@docs model, scheduler
+@docs model, scheduler, Scheduler
 
 # Execution
 @docs start, update
@@ -33,15 +33,19 @@ import Time
 {-| Messages used for internal operations.
 -}
 type Msg extmsg
-    = Poll
+    = Execute
     | Multi (List extmsg)
 
 
-type alias Scheduler m =
+type alias SchedulerRecord m =
     { model : m
     , next : m -> ( m, Time.Time )
     }
 
+{-| Defines a particular schedule for executing tasks.
+ -}
+type Scheduler m =
+    Scheduler (SchedulerRecord m)
 
 {-| Create a schedule for task execution.
 
@@ -51,13 +55,13 @@ type alias Scheduler m =
 current model, it produces the next model and the delay time.
 -}
 scheduler : m -> (m -> ( m, Time.Time )) -> Scheduler m
-scheduler =
-    Scheduler
+scheduler model next =
+    Scheduler (SchedulerRecord  model next)
 
 
 type alias ModelRecord error result s extmsg =
     { task : Task.Task error result
-    , scheduler : Scheduler s
+    , scheduler : SchedulerRecord s
     , onSuccess : result -> extmsg
     , onError : error -> extmsg
     , msgWrapper : Msg extmsg -> extmsg
@@ -80,7 +84,9 @@ type Model error result s extmsg
 -}
 model : Task.Task e r -> Scheduler s -> (r -> m) -> (e -> m) -> (Msg m -> m) -> (r -> Bool) -> Model e r s m
 model task scheduler onResult onError msgWrapper continue =
-    Model (ModelRecord task scheduler onResult onError msgWrapper continue)
+    case scheduler of
+        Scheduler srec ->
+            Model (ModelRecord task srec onResult onError msgWrapper continue)
 
 
 {-| Process a Msg to update a Model.
@@ -92,20 +98,20 @@ update msg model =
     case model of
         Model rec ->
             case msg of
-                Poll ->
+                Execute ->
                     let
                         ( schedulerModel, period ) =
                             rec.scheduler.next rec.scheduler.model
 
                         scheduler =
-                            Scheduler schedulerModel rec.scheduler.next
+                            SchedulerRecord schedulerModel rec.scheduler.next
 
                         task =
                             delay period rec.task
 
                         msgs result =
                             if (rec.continue result) then
-                                [ rec.onSuccess result, rec.msgWrapper Poll ]
+                                [ rec.onSuccess result, rec.msgWrapper Execute ]
                             else
                                 [ rec.onSuccess result ]
 
@@ -129,4 +135,4 @@ start : Model e r s m -> Platform.Cmd.Cmd m
 start model =
     case model of
         Model rec ->
-            message (rec.msgWrapper Poll)
+            message (rec.msgWrapper Execute)

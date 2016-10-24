@@ -1,6 +1,13 @@
 module TaskRepeater.Schedulers exposing (exponentialBackoff, uniform)
 
-import TaskRepeater exposing (Scheduler)
+{-| A collection of schedulers for task repeaters.
+
+# Schedulers
+@docs uniform, exponentialBackoff
+
+-}
+
+import TaskRepeater exposing (scheduler)
 import Time
 
 {- A scheduler that puts a uniform time between each performance of the task. -}
@@ -8,9 +15,7 @@ import Time
 
 uniform : Time.Time -> Scheduler Time.Time
 uniform period =
-    { model = period
-    , next = \last -> ( last, last )
-    }
+    scheduler period (\last -> (last, last))
 
 
 type alias ExponentialParams =
