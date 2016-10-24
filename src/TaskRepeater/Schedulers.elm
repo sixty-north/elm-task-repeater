@@ -6,7 +6,7 @@ module TaskRepeater.Schedulers exposing (exponentialBackoff, uniform)
 @docs uniform, exponentialBackoff
 -}
 
-import TaskRepeater exposing (scheduler)
+import TaskRepeater exposing (scheduler, Scheduler)
 import Time
 
 
@@ -42,11 +42,9 @@ exponentialBackoff period factor maxPeriod =
     let
         params =
             ExponentialParams period factor maxPeriod
+
+        next params =
+            ({params | period = min (params.period * params.factor) params.max}
+            , params.period)
     in
-        { model = params
-        , next =
-            \p ->
-                ( { p | period = max (p.period * p.factor) p.max }
-                , p.period
-                )
-        }
+        scheduler params next
